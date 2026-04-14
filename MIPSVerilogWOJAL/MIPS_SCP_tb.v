@@ -21,13 +21,18 @@ module MIPS_SCP_tb;
     always
         #50 clk=!clk;
 	initial begin
-    	clk=0;
-	reset=1;
-	#100; //cycle 1
-        repeat(10) begin
-	reset=0;
-	#100;
-        end
-        #10;
-  	end
+		clk = 0;
+		reset = 1;
+		#100;
+		reset = 0;
+
+		repeat(300) @(posedge clk);
+
+		$writememb("generated/outputs/dmem.bin", uut.dmem.Dmem, 0, 255);
+		$writememb("generated/outputs/reg.bin", uut.datapathcomp.RF.register, 0, 31);
+		$writememb("generated/outputs/imem.bin", uut.imem.Imem, 0, 255);
+
+		$display("Simulation done. Dumped generated/outputs/*.bin");
+		$finish;
+	end
 endmodule
