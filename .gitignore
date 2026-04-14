@@ -1,0 +1,55 @@
+# Compiled files
+*.o
+*.so
+*.out
+
+# Simulation outputs
+*.vcd
+*.log
+*.wlf
+
+# Generated files
+simv
+simv.daidir
+*.db
+
+# Waveform files
+*.fst
+*.ghw
+
+# ModelSim/Questasim
+work/
+vlog.wave
+vlog.cache
+
+# Icarus Verilog
+iverilog.log
+
+# GTKWave
+gtkw_save.tmp
+
+# Quartus/Intel
+db/
+incremental_db/
+output_files/
+*.rpt
+*.summary
+*.done
+*.qws
+
+# Xilinx/Vivado
+*.log
+*.jou
+*.prj
+hw/
+*.ip_user_files/
+
+# Vivado
+*.ip
+*.core
+
+# General
+*.bak
+*.swp
+*~
+.DS_Store
