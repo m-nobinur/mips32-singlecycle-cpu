@@ -16,7 +16,7 @@ output [width-1:0] dout;
 reg [width-1:0] Imem[depth-1:0];
     
 initial
-    $readmemb("memfile.txt", Imem);
+  $readmemb("generated/inputs/mean_max_min.out.no_address.text.bin", Imem, 0, 29);
     
   assign dout= Imem[adr/4]; 
 
