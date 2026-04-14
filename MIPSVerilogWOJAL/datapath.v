@@ -37,7 +37,8 @@ wire [4:0] writereg;
 flopr_param #(32) PCregister(clk,reset, PC,PCNext);
   adder #(32) pcadd4(PC, 32'd4 ,PCplus4);
 slt2 shifteradd2(extendedimm,extendedimmafter);
-adder #(32) pcaddsigned(extendedimmafter,PCplus4,PCbeforeBranch);
+// Assembler emits absolute word-index branch labels, so branch target is imm<<2.
+assign PCbeforeBranch = extendedimmafter;
 mux2 #(32) branchmux(PCplus4 , PCbeforeBranch, PCSrc, PCBranch);
 mux2 #(32) jumpmux(PCBranch, {PCplus4[31:28],Instr[25:0],2'b00 }, Jump,PCNext);
 
