@@ -79,7 +79,7 @@ Derived values:
 ### 0) Clone and enter the repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/m-nobinur/mips32-singlecycle-cpu
 cd assignment-final
 ```
 
@@ -87,6 +87,7 @@ cd assignment-final
 
 ```bash
 mkdir -p MIPSVerilogWOJAL/generated/inputs MIPSVerilogWOJAL/generated/outputs
+
 ./asmblr MIPSVerilogWOJAL/mean_max_min.s MIPSVerilogWOJAL/generated/inputs/mean_max_min.out
 ```
 
@@ -96,7 +97,7 @@ Generated assembler files:
 - `MIPSVerilogWOJAL/generated/inputs/mean_max_min.out.no_address.data.bin` contains the machine code for the data section without the addresses.
 - `MIPSVerilogWOJAL/generated/inputs/mean_max_min.out.no_address.text.bin` contains the machine code for the text section without the addresses.
 
-### 2) Compile and run simulation (from MIPS folder)
+### 2) Compile and run simulation
 
 ```bash
 cd MIPSVerilogWOJAL
@@ -134,7 +135,6 @@ Target checks:
 
 ## Acknowledgements
 
-- Assembler source: UpgradedMIPS32Assembler by RoySRC
-  https://github.com/RoySRC/UpgradedMIPS32Assembler
+- Assembler source: UpgradedMIPS32Assembler by [RoySRC](https://github.com/RoySRC/UpgradedMIPS32Assembler)
 - `verify` script was written with GPT assistance and then manually reviewed/edited for this project.
 - CPU RTL and testbench were adapted from the provided single-cycle CPU template.
