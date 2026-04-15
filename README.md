@@ -80,7 +80,7 @@ Derived values:
 
 ```bash
 git clone https://github.com/m-nobinur/mips32-singlecycle-cpu
-cd assignment-final
+cd mips32-singlecycle-cpu
 ```
 
 ### 1) Assemble (from project root)
@@ -128,7 +128,7 @@ Target checks:
 ## Constraints and Notes
 
 - `verify` supports `dmem`, `reg`, and `imem` targets.
-- `verify` accepts raw dump files only (annotated input is rejected).
+- `verify` accepts raw output files only (annotated input is rejected).
 - RAM is word-indexed in this project, so array traversal uses `+1` per element.
 - Mean is implemented via repeated subtraction (`sum / 10`) since DIV is not used.
 - Relative memory paths in RTL assume simulation is launched from `MIPSVerilogWOJAL/`.
