@@ -1,4 +1,4 @@
-# CSE532 Final Project: MIPS MIN/MAX/MEAN
+# 32-bit MIPS CPU Design and Testing
 
 ## Overview
 
@@ -89,6 +89,12 @@ cd assignment-final
 mkdir -p MIPSVerilogWOJAL/generated/inputs MIPSVerilogWOJAL/generated/outputs
 ./asmblr MIPSVerilogWOJAL/mean_max_min.s MIPSVerilogWOJAL/generated/inputs/mean_max_min.out
 ```
+
+Generated assembler files:
+
+- `MIPSVerilogWOJAL/generated/inputs/mean_max_min.out` contains the machine code for only the text section with the addresses.
+- `MIPSVerilogWOJAL/generated/inputs/mean_max_min.out.no_address.data.bin` contains the machine code for the data section without the addresses.
+- `MIPSVerilogWOJAL/generated/inputs/mean_max_min.out.no_address.text.bin` contains the machine code for the text section without the addresses.
 
 ### 2) Compile and run simulation (from MIPS folder)
 
