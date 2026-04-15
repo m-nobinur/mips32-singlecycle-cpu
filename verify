@@ -1,0 +1,304 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+bar() {
+  printf '%s\n' "============================================================"
+}
+
+subbar() {
+  printf '%s\n' "------------------------------------------------------------"
+}
+
+usage() {
+  cat <<'EOF'
+Usage:
+  verify <dmem|reg|imem> -f <file-name>
+
+Requested form:
+  verify dmem -f {file-name}
+  verify reg -f {file-name}
+  verify imem -f {file-name}
+
+Example:
+  verify dmem -f MIPSVerilogWOJAL/generated/outputs/dmem.bin
+  verify reg  -f MIPSVerilogWOJAL/generated/outputs/reg.bin
+  verify imem -f MIPSVerilogWOJAL/generated/outputs/imem.bin
+EOF
+}
+
+if [[ $# -lt 1 ]]; then
+  usage
+  exit 1
+fi
+
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+target="$1"
+shift
+
+case "$target" in
+  dmem|reg|imem)
+    ;;
+  *)
+    echo "Unsupported target: $target" >&2
+    usage
+    exit 1
+    ;;
+esac
+
+input_file=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -f)
+      input_file="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [[ -z "$input_file" ]]; then
+  echo "Missing required argument: -f <file-name>" >&2
+  usage
+  exit 1
+fi
+
+if [[ ! -f "$input_file" ]]; then
+  echo "Input file not found: $input_file" >&2
+  exit 1
+fi
+
+symbol_name=""
+sample_file=""
+check_idx_list=()
+label_list=()
+expected_bin_list=()
+expected_dec_list=()
+
+case "$target" in
+  dmem)
+    symbol_name="Dmem"
+    sample_file="MIPSVerilogWOJAL/generated/outputs/dmem.bin"
+    check_idx_list=(100 120 140)
+    label_list=("MEAN" "MAX" "MIN")
+    expected_bin_list=(
+      "00000000000000000000000000001110"
+      "00000000000000000000000000011110"
+      "00000000000000000000000000000011"
+    )
+    expected_dec_list=(14 30 3)
+    ;;
+  reg)
+    symbol_name="Reg"
+    sample_file="MIPSVerilogWOJAL/generated/outputs/reg.bin"
+    check_idx_list=(10 11 12 16)
+    label_list=("SUM_\$t2" "MAX_\$t3" "MIN_\$t4" "MEAN_\$s0")
+    expected_bin_list=(
+      "00000000000000000000000010010010"
+      "00000000000000000000000000011110"
+      "00000000000000000000000000000011"
+      "00000000000000000000000000001110"
+    )
+    expected_dec_list=(146 30 3 14)
+    ;;
+  imem)
+    symbol_name="Imem"
+    sample_file="MIPSVerilogWOJAL/generated/outputs/imem.bin"
+    check_idx_list=(26 27 28 29)
+    label_list=("SW_MEAN" "SW_MAX" "SW_MIN" "J_HALT")
+    expected_bin_list=(
+      "10101100000100000000000001100100"
+      "10101100000010110000000001111000"
+      "10101100000011000000000010001100"
+      "00001000000000000000000000011101"
+    )
+    expected_dec_list=("N/A" "N/A" "N/A" "N/A")
+    ;;
+esac
+
+found_line=()
+found_bits=()
+found_addr_hex=()
+for _ in "${check_idx_list[@]}"; do
+  found_line+=("")
+  found_bits+=("")
+  found_addr_hex+=("")
+done
+annotated_input_detected=0
+
+line_no=0
+data_idx=0
+current_block_addr=-1
+
+while IFS= read -r line || [[ -n "$line" ]]; do
+  ((line_no += 1))
+
+  # Track output block markers like: // 0x00000010
+  if [[ "$line" =~ ^[[:space:]]*//[[:space:]]*0x([0-9a-fA-F]+)[[:space:]]*$ ]]; then
+    current_block_addr=$((16#${BASH_REMATCH[1]}))
+    continue
+  fi
+
+  if [[ "$line" =~ ^[[:space:]]*(Dmem|Reg|Imem)\[[0-9]+\][[:space:]]*= ]]; then
+    annotated_input_detected=1
+    break
+  fi
+
+  if [[ "$line" =~ ^[[:space:]]*// ]]; then
+    continue
+  fi
+
+  if [[ "$line" =~ ^[[:space:]]*$ ]]; then
+    continue
+  fi
+
+  if [[ "$line" =~ ^[[:space:]]*([01xX]{32})[[:space:]]*$ ]]; then
+    bits="${BASH_REMATCH[1]}"
+    addr_dec="$data_idx"
+
+    # Derive hex address using the nearest output block marker when available.
+    if [[ "$current_block_addr" -ge 0 ]]; then
+      offset_in_block=$((addr_dec - current_block_addr))
+      if [[ "$offset_in_block" -ge 0 && "$offset_in_block" -lt 16 ]]; then
+        addr_for_hex=$((current_block_addr + offset_in_block))
+      else
+        addr_for_hex="$addr_dec"
+      fi
+    else
+      addr_for_hex="$addr_dec"
+    fi
+    printf -v addr_hex "0x%08x" "$addr_for_hex"
+
+    for idx in "${!check_idx_list[@]}"; do
+      if [[ "$data_idx" -eq "${check_idx_list[$idx]}" && -z "${found_line[$idx]}" ]]; then
+        found_line[$idx]="$line_no"
+        found_bits[$idx]="$bits"
+        found_addr_hex[$idx]="$addr_hex"
+      fi
+    done
+
+    ((data_idx += 1))
+  fi
+done < "$input_file"
+
+if [[ "$annotated_input_detected" -eq 1 ]]; then
+  echo "This script supports raw output dump files only." >&2
+  echo "Use: verify $target -f $sample_file" >&2
+  exit 1
+fi
+
+bar
+upper_target="$(printf '%s' "$target" | tr '[:lower:]' '[:upper:]')"
+echo "VERIFY :: $upper_target"
+bar
+echo "Input file      : $input_file"
+
+expected_addrs=""
+for idx in "${!check_idx_list[@]}"; do
+  if [[ "$idx" -gt 0 ]]; then
+    expected_addrs+=" , "
+  fi
+  expected_addrs+="${check_idx_list[$idx]}"
+done
+echo "Expected addrs  : $expected_addrs"
+
+echo "Expected values :"
+for idx in "${!check_idx_list[@]}"; do
+  addr="${check_idx_list[$idx]}"
+  label="${label_list[$idx]}"
+  expected_bin="${expected_bin_list[$idx]}"
+  expected_dec="${expected_dec_list[$idx]}"
+
+  if [[ "$expected_dec" == "N/A" ]]; then
+    echo "  $symbol_name[$addr] -> $label = $expected_bin"
+  else
+    echo "  $symbol_name[$addr] -> $label = $expected_bin ($expected_dec)"
+  fi
+done
+subbar
+
+pass_count=0
+fail_count=0
+missing_count=0
+
+for idx in "${!check_idx_list[@]}"; do
+  addr="${check_idx_list[$idx]}"
+  label="${label_list[$idx]}"
+  expected_bin="${expected_bin_list[$idx]}"
+  expected_dec="${expected_dec_list[$idx]}"
+
+  echo "[$label] Address $addr"
+
+  if [[ -z "${found_line[$idx]}" ]]; then
+    echo "  Line no   : N/A"
+    echo "  Data      : N/A ---> N/A"
+    echo "  Addr      : N/A"
+    echo "  Annotated : $symbol_name[$addr] = N/A"
+    if [[ "$expected_dec" == "N/A" ]]; then
+      echo "  Expected  : $symbol_name[$addr] = $expected_bin"
+    else
+      echo "  Expected  : $symbol_name[$addr] = $expected_bin ($expected_dec)"
+    fi
+    echo "  Status    : MISSING"
+    ((missing_count += 1))
+    subbar
+    continue
+  fi
+
+  actual_line_no="${found_line[$idx]}"
+  actual_bin="${found_bits[$idx]}"
+
+  if [[ "$actual_bin" =~ [xX] ]]; then
+    actual_dec="N/A"
+  else
+    actual_dec="$((2#$actual_bin))"
+  fi
+
+  echo "  Line no   : $actual_line_no"
+  echo "  Data      : $actual_bin ---> $actual_dec"
+  echo "  Addr      : [${found_addr_hex[$idx]}] ---> $addr"
+  if [[ "$expected_dec" == "N/A" ]]; then
+    echo "  Annotated : $symbol_name[$addr] = $actual_bin"
+    echo "  Expected  : $symbol_name[$addr] = $expected_bin"
+  else
+    echo "  Annotated : $symbol_name[$addr] = $actual_bin ($actual_dec)"
+    echo "  Expected  : $symbol_name[$addr] = $expected_bin ($expected_dec)"
+  fi
+
+  if [[ "$actual_bin" == "$expected_bin" ]]; then
+    echo "  Status    : PASS"
+    ((pass_count += 1))
+  else
+    echo "  Status    : FAIL"
+    ((fail_count += 1))
+  fi
+
+  subbar
+done
+
+bar
+echo "VERIFICATION SUMMARY"
+bar
+echo "PASS    : $pass_count"
+echo "FAIL    : $fail_count"
+echo "MISSING : $missing_count"
+
+if [[ "$fail_count" -eq 0 && "$missing_count" -eq 0 ]]; then
+  echo "VERDICT : PASS"
+  exit 0
+fi
+
+echo "VERDICT : FAIL"
+exit 1
