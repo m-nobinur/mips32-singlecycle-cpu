@@ -1,7 +1,6 @@
 # Compiled files
 *.o
 *.so
-*.out
 
 # Simulation outputs
 *.vcd
