@@ -32,7 +32,7 @@ module MIPS_SCP_tb;
 		$writememb("generated/outputs/reg.bin", uut.datapathcomp.RF.register, 0, 31);
 		$writememb("generated/outputs/imem.bin", uut.imem.Imem, 0, 255);
 
-		$display("Simulation done. Dumped generated/outputs/*.bin");
+		$display("Simulation done. Dumped generated/outputs/dmem.bin, generated/outputs/reg.bin, generated/outputs/imem.bin");
 		$finish;
 	end
 endmodule
